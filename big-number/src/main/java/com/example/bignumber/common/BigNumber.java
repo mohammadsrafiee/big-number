@@ -1,4 +1,4 @@
-package com.example.bignumber.number;
+package com.example.bignumber.common;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
@@ -9,9 +9,9 @@ import java.lang.reflect.ParameterizedType;
  * @param <T> The generic type representing individual digits or elements.
  * @param <X> The concrete subtype of BigNumber.
  */
-public abstract class BigNumber<T, X extends BigNumber<T, ?>> {
+public abstract class BigNumber<T, X extends BigNumber<T, ?>> implements Comparable<X> {
     private static final String SPLITTER = "";
-    private final T[] number;
+    protected final T[] number;
 
     /**
      * Constructs a BigNumber instance from a string input and a specified length.
@@ -61,7 +61,7 @@ public abstract class BigNumber<T, X extends BigNumber<T, ?>> {
                 carry = calculateCarry(sumResult);
                 temporary[index + 1] = calculateRemain(sumResult);
             }
-            temporary[0] = carry != null ? carry : getPadding();
+            temporary[0] = carry;
             result = create(temporary);
         } else if ((input == null || input.size() == 0) && (this.size() > 0)) {
             result = copy((X) this);
@@ -73,13 +73,94 @@ public abstract class BigNumber<T, X extends BigNumber<T, ?>> {
         return result;
     }
 
+    public T getValue(int index) {
+        if (this.number != null && this.number.length > index) {
+            return this.number[index];
+        }
+        return null;
+    }
+
     /**
      * Returns the size (length) of the BigNumber.
      *
      * @return The size (length) of the BigNumber.
      */
     public int size() {
-        return number == null ? 0 : number.length;
+        X source = this.removePadding();
+        String value = source.getValue();
+        return value == null ? 0 : value.length();
+    }
+
+    /**
+     * Compares this BigNumber with another BigNumber.
+     *
+     * @param object The BigNumber to compare with.
+     * @return A negative integer if this BigNumber is less than the target, zero if they are equal,
+     * or a positive integer if this BigNumber is greater than the target.
+     */
+    @Override
+    public int compareTo(X object) {
+        if (object == null) {
+            throw new NullPointerException("Cannot compare with a null value.");
+        }
+        X source = this.removePadding();
+        X target = (X) object.removePadding();
+        if (source != null && target != null) {
+            // Compare sizes first
+            if (source.size() < target.size()) {
+                return -1;
+            } else if (source.size() > target.size()) {
+                return 1;
+            }
+
+            // Compare individual digits starting from the most significant digit
+            for (int i = 0; i < source.size(); i++) {
+                T thisDigit = source.getNumber(i);
+                T otherDigit = target.getNumber(i);
+
+                int digitComparison = compareDigits(thisDigit, otherDigit);
+                if (digitComparison != 0) {
+                    return digitComparison;
+                }
+            }
+        } else if (source == null && target != null) {
+            return -1;
+        } else if (source != null) {
+            return 1;
+        } else {
+            return 0;
+        }
+
+        // All digits are equal
+        return 0;
+    }
+
+    /**
+     * Compares this BigNumber with another object for equality.
+     *
+     * @param obj The object to compare with.
+     * @return {@code true} if the objects are equal, {@code false} otherwise.
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        X target = (X) ((X) obj).removePadding();
+        X source = this.removePadding();
+        if (source == null || target == null) return false;
+        if (source.size() != target.size()) return false;
+
+        // Compare individual digits
+        for (int i = 0; i < source.size(); i++) {
+            T thisDigit = source.getNumber(i);
+            T otherDigit = target.getNumber(i);
+            if (compareDigits(thisDigit, otherDigit) != 0) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // Abstract methods to be implemented by subclasses
@@ -100,6 +181,10 @@ public abstract class BigNumber<T, X extends BigNumber<T, ?>> {
 
     protected abstract T getNumber(String input);
 
+    protected abstract X removePadding();
+
+    protected abstract String getValue();
+
     /**
      * Returns the digit at the specified index.
      *
@@ -108,9 +193,16 @@ public abstract class BigNumber<T, X extends BigNumber<T, ?>> {
      */
     public abstract T getNumber(int index);
 
-    protected T getValue(int index) {
-        return this.number[index];
-    }
+    /**
+     * Compares two individual digits of type T.
+     *
+     * @param digit1 The first digit.
+     * @param digit2 The second digit.
+     * @return A negative integer if digit1 is less than digit2, zero if they are equal,
+     * or a positive integer if digit1 is greater than digit2.
+     */
+    protected abstract int compareDigits(T digit1, T digit2);
+
 
     // Additional methods for internal use
 

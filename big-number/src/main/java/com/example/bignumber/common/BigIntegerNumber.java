@@ -1,4 +1,4 @@
-package com.example.bignumber.number;
+package com.example.bignumber.common;
 
 /**
  * A class representing a large integer using the BigNumber framework.
@@ -49,7 +49,8 @@ public class BigIntegerNumber extends BigNumber<Integer, BigIntegerNumber> {
     protected BigIntegerNumber create(Integer[] input) {
         StringBuilder builder = new StringBuilder();
         for (Integer digit : input) {
-            builder.append(digit);
+            if (digit != null)
+                builder.append(digit);
         }
         return new BigIntegerNumber(builder.toString());
     }
@@ -70,6 +71,24 @@ public class BigIntegerNumber extends BigNumber<Integer, BigIntegerNumber> {
     }
 
     @Override
+    protected BigIntegerNumber removePadding() {
+        String value = this.getValue();
+        if (value != null) {
+            String number = value
+                    .trim()
+                    .replace(" ", "")
+                    .replaceFirst("^0+", "");
+            return new BigIntegerNumber(number);
+        }
+        return null;
+    }
+
+    @Override
+    protected int compareDigits(Integer digit1, Integer digit2) {
+        return Integer.compare(digit1, digit2);
+    }
+
+    @Override
     public Integer getNumber(int index) {
         if (index >= 0 && index < size()) {
             return Integer.parseInt(getValue().substring(index, index + 1));
@@ -85,8 +104,10 @@ public class BigIntegerNumber extends BigNumber<Integer, BigIntegerNumber> {
      */
     public String getValue() {
         StringBuilder builder = new StringBuilder();
-        for (int index = 0; index < this.size(); ++index) {
-            builder.append(super.getValue(index));
+        int size = (this.number == null) ? 0 : this.number.length;
+        for (int index = 0; index < size; ++index) {
+            Integer value = this.number[index];
+            builder.append(value);
         }
         return builder.toString();
     }
